@@ -55,6 +55,7 @@ appium-server.log
 
 # Android
 *.apk
+!apps/*.apk
 *.keystore
 *.jks
 

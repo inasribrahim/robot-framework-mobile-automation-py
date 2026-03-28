@@ -53,23 +53,15 @@ jobs:
           appium driver list --installed
           echo "Appium UIAutomator2 driver installed"
 
-      - name: Download Test APK
+      - name: Verify Test APK
         run: |
-          set -euxo pipefail
-          mkdir -p apps
+          ls -lh apps/wdioNativeDemoApp.apk
           
-          APK_URL="https://raw.githubusercontent.com/inasribrahim/webIo_apk/main/webdriverio-app.apk"
+          # Verify it's a valid APK (zip archive)
+          file apps/wdioNativeDemoApp.apk | tee /tmp/apk_filetype.txt
+          unzip -t apps/wdioNativeDemoApp.apk >/dev/null
           
-          # Retry and fail on HTTP errors; follow redirects
-          curl -fL --retry 5 --retry-delay 2 -o apps/webdriverio-app.apk "$APK_URL"
-          
-          ls -lh apps/webdriverio-app.apk
-          
-          # Verify it's actually an APK (zip archive)
-          file apps/webdriverio-app.apk | tee /tmp/apk_filetype.txt
-          unzip -t apps/webdriverio-app.apk >/dev/null
-          
-          echo "Test APK downloaded and validated successfully"
+          echo "Test APK verified successfully"
 
       - name: Enable KVM (Kernel Virtual Machine)
         run: |
@@ -138,7 +130,7 @@ jobs:
             # Install APK with retries
             echo "Installing APK..."
             for i in 1 2 3; do
-              if adb install -r apps/webdriverio-app.apk; then
+              if adb install -r apps/wdioNativeDemoApp.apk; then
                 echo "APK installed successfully"
                 break
               else
