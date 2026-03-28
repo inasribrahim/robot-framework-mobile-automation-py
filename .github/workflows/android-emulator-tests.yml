@@ -11,6 +11,8 @@ jobs:
   android-emulator-tests:
     timeout-minutes: 45
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout Repository
@@ -79,6 +81,13 @@ jobs:
           curl -s http://localhost:4723/status || (cat appium-server.log && exit 1)
           echo "Appium server is running and responding"
 
+      - name: Ensure Android AVD directories exist
+        run: |
+          mkdir -p "$HOME/.android/avd"
+          mkdir -p "$HOME/.android"
+          ls -la "$HOME/.android" || true
+          echo "Android AVD directories prepared"
+
       - name: Run Tests on Android Emulator
         uses: reactivecircus/android-emulator-runner@v2.32.0
         with:
@@ -86,7 +95,7 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: Nexus 6
-          force-avd-creation: false
+          force-avd-creation: true
           disable-animations: true
           disable-spellchecker: true
           cores: 2
@@ -150,15 +159,22 @@ jobs:
       - name: Generate Combined Robot Framework Report
         if: always()
         run: |
-          rebot --outputdir results/combined \
-                --name "Complete Test Execution Report" \
-                --output output.xml \
-                --log log.html \
-                --report report.html \
-                results/output.xml \
-                results/p0/output.xml \
-                results/login/output.xml \
-                results/signup/output.xml || true
+          files=()
+          for f in results/output.xml results/p0/output.xml results/login/output.xml results/signup/output.xml; do
+            [ -f "$f" ] && files+=("$f")
+          done
+          
+          if [ ${#files[@]} -gt 0 ]; then
+            rebot --outputdir results/combined \
+                  --name "Complete Test Execution Report" \
+                  --output output.xml \
+                  --log log.html \
+                  --report report.html \
+                  "${files[@]}"
+            echo "Combined report generated from ${#files[@]} output file(s)"
+          else
+            echo "No Robot output.xml files found; skipping rebot."
+          fi
 
       - name: Upload Test Results
         if: always()
