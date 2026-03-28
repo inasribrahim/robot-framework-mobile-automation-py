@@ -12,6 +12,7 @@ Library          OperatingSystem
 Library          DateTime
 Library          Collections
 Library          AppiumLibrary
+Library          base64
 
 
 *** Keywords ***
@@ -24,6 +25,9 @@ Open Test Application
     Run Keyword If    '${PLATFORM_NAME}' == '${ANDROID_PLATFORM_NAME}'    Open Android Application
     ...    ELSE IF    '${PLATFORM_NAME}' == '${IOS_PLATFORM_NAME}'        Open IOS Application
     ...    ELSE       Fail    Invalid platform name: ${PLATFORM_NAME}
+    
+    # Register automatic screenshot capture on test failure
+    Register Keyword To Run On Failure    Capture Failure Screenshot
     
     Log    Application opened successfully on ${PLATFORM_NAME}    INFO
 
@@ -75,6 +79,7 @@ Close Test Application
     [Documentation]    Close the mobile application and cleanup
     [Tags]            teardown    cleanup
     
+    Run Keyword And Ignore Error    Stop Video Recording If Running
     Run Keyword And Ignore Error    Close Application
     Log    Application closed successfully    INFO
 
@@ -255,6 +260,14 @@ Take Screenshot With Timestamp
     RETURN    ${screenshot_path}
 
 
+Capture Failure Screenshot
+    [Documentation]    Capture screenshot on test failure - automatically registered with Appium
+    
+    ${status}    ${error}=    Run Keyword And Ignore Error    Capture Page Screenshot
+    Run Keyword If    '${status}' == 'PASS'    Log    Failure screenshot captured    INFO
+    Run Keyword If    '${status}' == 'FAIL'    Log    Could not capture screenshot: ${error}    WARN
+
+
 Scroll Down
     [Documentation]    Scroll down on the screen
     [Arguments]        ${duration}=${SWIPE_DURATION}
@@ -309,3 +322,76 @@ Restart Application
     Sleep    2s
     Open Test Application
     Log    Application restarted    INFO
+
+
+# ==============================================================================
+# Video Recording Keywords
+# ==============================================================================
+
+Start Video Recording
+    [Documentation]    Start screen recording for the test
+    ...                Video will be saved when Stop Video Recording is called
+    
+    ${status}    ${error}=    Run Keyword And Ignore Error    Start Recording Screen
+    Run Keyword If    '${status}' == 'PASS'    Log    Video recording started    INFO
+    Run Keyword If    '${status}' == 'FAIL'    Log    Could not start video recording: ${error}    WARN
+    Set Suite Variable    ${VIDEO_RECORDING_ACTIVE}    ${status}
+
+
+Stop Video Recording
+    [Documentation]    Stop screen recording and save video file
+    [Arguments]        ${video_name}=${TEST_NAME}
+    
+    ${status}    ${video_data}=    Run Keyword And Ignore Error    Stop Recording Screen
+    Run Keyword If    '${status}' == 'PASS'    Save Video File    ${video_data}    ${video_name}
+    Run Keyword If    '${status}' == 'FAIL'    Log    Could not stop video recording: ${video_data}    WARN
+    Set Suite Variable    ${VIDEO_RECORDING_ACTIVE}    FAIL
+
+
+Stop Video Recording If Running
+    [Documentation]    Stop video recording if it's currently active
+    
+    ${is_running}=    Get Variable Value    ${VIDEO_RECORDING_ACTIVE}    FAIL
+    Run Keyword If    '${is_running}' == 'PASS'    Stop Video Recording    final_video
+
+
+Save Video File
+    [Documentation]    Save base64 video data to file and embed in report
+    [Arguments]        ${video_data}    ${video_name}
+    
+    ${safe_name}=    Replace String    ${video_name}    ${SPACE}    _
+    ${safe_name}=    Replace String    ${safe_name}    /    _
+    ${safe_name}=    Replace String    ${safe_name}    :    _
+    ${video_file}=    Set Variable    ${OUTPUT_DIR}${/}${safe_name}.mp4
+    
+    # Decode base64 video data and save to file
+    TRY
+        ${decoded_video}=    Evaluate    base64.b64decode($video_data)    modules=base64
+        Create Binary File    ${video_file}    ${decoded_video}
+        
+        # Embed video in HTML report with relative path
+        Log    <video width="800" height="600" controls><source src="${safe_name}.mp4" type="video/mp4">Your browser does not support video.</video>    HTML
+        Log    Video saved and embedded in report: ${video_file}    INFO
+    EXCEPT    AS    ${error}
+        Log    Could not save video file: ${error}    WARN
+    END
+
+
+# ==============================================================================
+# Test Execution Keywords with Video
+# ==============================================================================
+
+Setup Test With Video
+    [Documentation]    Test setup that includes video recording
+    ...                Only starts recording if ENABLE_VIDEO_RECORDING is True
+    
+    Open Test Application
+    Run Keyword If    '${ENABLE_VIDEO_RECORDING}' == 'True'    Start Video Recording
+
+
+Teardown Test With Video
+    [Documentation]    Test teardown that stops video and closes app
+    ...                Only stops recording if ENABLE_VIDEO_RECORDING is True
+    
+    Run Keyword If    '${ENABLE_VIDEO_RECORDING}' == 'True'    Stop Video Recording    ${TEST_NAME}
+    Close Test Application

@@ -470,8 +470,51 @@ open results/output.xml
 - Test case pass/fail status
 - Execution time
 - Error messages
-- Screenshots on failure
+- **Screenshots on failure** (automatically captured)
+- **Video recordings** (optional, configurable)
 - Keyword-level details
+- Embedded multimedia (images and videos inline)
+
+### Screenshots and Video Recording
+
+The framework includes powerful debugging features:
+
+#### **Automatic Screenshots on Failure** ✅
+- Enabled by default
+- Captures screen state at moment of failure
+- Embedded inline in HTML reports
+- No configuration required
+
+#### **Video Recording** 🎥
+- Optional feature (disabled by default)
+- Records entire test execution
+- MP4 format with HTML5 player in reports
+- Enable globally or per-test
+
+**Enable video recording:**
+
+```robotframework
+# In configs/ApplicationConfigs.robot
+${ENABLE_VIDEO_RECORDING}    True
+
+# Or via command line
+robot --variable ENABLE_VIDEO_RECORDING:True test-cases/
+```
+
+**Use in tests:**
+
+```robotframework
+*** Settings ***
+Test Setup       Setup Test With Video
+Test Teardown    Teardown Test With Video
+```
+
+📖 **Comprehensive Guide**: See [docs/VIDEO_AND_SCREENSHOTS.md](docs/VIDEO_AND_SCREENSHOTS.md) for:
+- Detailed configuration options
+- Best practices for video recording
+- Troubleshooting tips
+- CI/CD integration examples
+- Storage optimization strategies
 
 ### Custom Reports
 

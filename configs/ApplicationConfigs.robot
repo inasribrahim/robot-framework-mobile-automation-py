@@ -29,6 +29,11 @@ ${SWIPE_DURATION}                 1000
 ${SWIPE_START_PERCENTAGE}         50
 ${SWIPE_END_PERCENTAGE}           20
 
+# Video Recording Configuration
+# Set to True to enable video recording for all tests (increases execution time)
+# Set to False to disable video recording (recommended for CI/CD)
+${ENABLE_VIDEO_RECORDING}         False
+
 # Screenshot Configuration
 ${SCREENSHOT_ON_FAILURE}          true
 ${SCREENSHOT_DIRECTORY}           ${CURDIR}/../results/screenshots
