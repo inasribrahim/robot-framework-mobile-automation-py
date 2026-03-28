@@ -14,7 +14,7 @@ ${PLATFORM_NAME}                  ${ANDROID_PLATFORM_NAME}
 
 # Android Configuration
 ${ANDROID_AUTOMATION_NAME}        UIAutomator2
-${ANDROID_APP}                    ${CURDIR}/../apps/webdriverio-app.apk
+${ANDROID_APP}                    ${CURDIR}/../apps/wdioNativeDemoApp.apk
 ${ANDROID_PLATFORM_NAME}          android
 ${ANDROID_PLATFORM_VERSION}       %{ANDROID_PLATFORM_VERSION=13}
 ${ANDROID_APP_PACKAGE}            com.wdiodemoapp
