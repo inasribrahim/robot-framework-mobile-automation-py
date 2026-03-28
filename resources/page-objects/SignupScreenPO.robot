@@ -272,4 +272,4 @@ Complete Signup With Random User
     Verify Signup Success Alert Is Displayed
     Click Signup Alert OK Button
     Log    Completed signup with random user: ${random_email}    INFO
-    [Return]    ${random_email}    ${random_password}
+    RETURN    ${random_email}    ${random_password}

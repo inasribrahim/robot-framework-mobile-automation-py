@@ -5,6 +5,7 @@ Documentation    Navigation Bar Page Object
 
 Resource         ../keywords/CommonKeywords.robot
 Resource         ../locators/NavigationBarLocators.robot
+Resource         LoginScreenPO.robot
 
 
 *** Keywords ***
@@ -31,7 +32,7 @@ Navigate To Login Screen
     [Tags]            navigation
     
     Click On Element    ${LOC_NAV_LOGIN_TAB}    ${SMALL_RETRY_SCALE}
-    Verify Login Screen Is Displayed
+    LoginScreenPO.Verify Login Screen Is Displayed
     Log    Navigated to Login screen    INFO
 
 
@@ -90,10 +91,7 @@ Verify Webview Screen Is Displayed
     Log    Webview screen displayed    DEBUG
 
 
-Verify Login Screen Is Displayed
-    [Documentation]    Verify Login screen is displayed after navigation
-    Sleep    1s    # Wait for screen transition
-    Log    Login screen displayed    DEBUG
+
 
 
 Verify Forms Screen Is Displayed

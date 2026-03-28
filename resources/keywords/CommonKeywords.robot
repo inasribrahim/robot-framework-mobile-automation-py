@@ -156,7 +156,9 @@ Clear Text Field
     Wait Until Keyword Succeeds    
     ...    ${retry_scale}    
     ...    ${RETRY_DELAY}    
-    ...    Clear Text    ${locator}
+    ...    Run Keywords
+    ...    Click Element    ${locator}
+    ...    AND    Clear Text    ${locator}
     
     Log    Cleared text field: ${locator}    INFO
 
@@ -168,7 +170,7 @@ Get Element Text Value
     Wait For Element To Be Visible    ${locator}    ${retry_scale}
     ${text}=    Get Text    ${locator}
     Log    Element text: ${text}    DEBUG
-    [Return]          ${text}
+    RETURN          ${text}
 
 
 Verify Element Text Equals
@@ -222,7 +224,7 @@ Generate Random Email
     ${random_string}=    Generate Random String    10    [LETTERS][NUMBERS]
     ${email}=    Set Variable    test${random_string}@mailinator.com
     Log    Generated email: ${email}    INFO
-    [Return]    ${email}
+    RETURN    ${email}
 
 
 Generate Random String With Length
@@ -231,7 +233,7 @@ Generate Random String With Length
     
     ${random_string}=    Generate Random String    ${length}    [LETTERS][NUMBERS]
     Log    Generated random string of length ${length}    DEBUG
-    [Return]    ${random_string}
+    RETURN    ${random_string}
 
 
 Get Current Timestamp
@@ -239,7 +241,7 @@ Get Current Timestamp
     
     ${timestamp}=    Get Time    epoch
     Log    Current timestamp: ${timestamp}    DEBUG
-    [Return]    ${timestamp}
+    RETURN    ${timestamp}
 
 
 Take Screenshot With Timestamp
@@ -250,7 +252,7 @@ Take Screenshot With Timestamp
     ${screenshot_name}=    Set Variable    ${prefix}_${timestamp}
     ${screenshot_path}=    Capture Page Screenshot    ${screenshot_name}.png
     Log    Screenshot saved: ${screenshot_path}    INFO
-    [Return]    ${screenshot_path}
+    RETURN    ${screenshot_path}
 
 
 Scroll Down
@@ -296,7 +298,7 @@ Put App To Background And Reactivate
     [Documentation]    Put app to background and bring back to foreground
     [Arguments]        ${duration}=5
     
-    Background App    ${duration}
+    Background Application    ${duration}
     Log    App sent to background for ${duration} seconds    INFO
 
 
