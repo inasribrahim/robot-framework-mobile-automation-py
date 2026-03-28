@@ -105,84 +105,82 @@ jobs:
           heap-size: 512M
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            bash -lc '
-              set -euo pipefail
+            set -euo pipefail
 
-              echo "Emulator started successfully"
-              adb devices
+            echo "Emulator started successfully"
+            adb devices
 
-              # Stabilize ADB
-              adb kill-server || true
-              adb start-server
-              adb wait-for-device
+            # Stabilize ADB
+            adb kill-server || true
+            adb start-server
+            adb wait-for-device
 
-              # Wait for full boot + package manager readiness
-              adb shell getprop sys.boot_completed | grep -m 1 "1"
-              adb shell getprop dev.bootcomplete | grep -m 1 "1" || true
+            # Wait for full boot + package manager readiness
+            adb shell getprop sys.boot_completed | grep -m 1 "1"
+            adb shell getprop dev.bootcomplete | grep -m 1 "1" || true
 
-              # Disable animations for stability
-              adb shell settings put global window_animation_scale 0 || true
-              adb shell settings put global transition_animation_scale 0 || true
-              adb shell settings put global animator_duration_scale 0 || true
+            # Disable animations for stability
+            adb shell settings put global window_animation_scale 0 || true
+            adb shell settings put global transition_animation_scale 0 || true
+            adb shell settings put global animator_duration_scale 0 || true
 
-              # Unlock screen
-              adb shell input keyevent 82 || true
-              adb shell input keyevent 4 || true
-              sleep 2
+            # Unlock screen
+            adb shell input keyevent 82 || true
+            adb shell input keyevent 4 || true
+            sleep 2
 
-              # Install APK with retries
-              echo "Installing APK..."
-              for i in 1 2 3; do
-                if adb install -r apps/wdioNativeDemoApp.apk; then
-                  echo "APK installed successfully"
-                  break
-                else
-                  echo "Install failed; retrying ($i/3)..."
-                  adb shell pm clear com.android.packageinstaller || true
-                  sleep 3
-                fi
-              done
+            # Install APK with retries
+            echo "Installing APK..."
+            for i in 1 2 3; do
+              if adb install -r apps/wdioNativeDemoApp.apk; then
+                echo "APK installed successfully"
+                break
+              else
+                echo "Install failed; retrying ($i/3)..."
+                adb shell pm clear com.android.packageinstaller || true
+                sleep 3
+              fi
+            done
 
-              # Verify installation
-              adb shell pm list packages | grep wdiodemoapp || echo "Warning: Package not found in pm list"
-              echo "APK installation complete"
+            # Verify installation
+            adb shell pm list packages | grep wdiodemoapp || echo "Warning: Package not found in pm list"
+            echo "APK installation complete"
 
-              # Run Robot Framework Tests - Smoke Suite
-              robot --outputdir results \
-                    --loglevel INFO \
-                    --include Smoke \
-                    --name "Smoke Test Suite" \
-                    --variable PLATFORM_NAME:android \
-                    --variable ANDROID_PLATFORM_VERSION:13 \
-                    test-cases/ || true
+            # Run Robot Framework Tests - Smoke Suite
+            robot --outputdir results \
+                  --loglevel INFO \
+                  --include Smoke \
+                  --name "Smoke Test Suite" \
+                  --variable PLATFORM_NAME:android \
+                  --variable ANDROID_PLATFORM_VERSION:13 \
+                  test-cases/ || true
 
-              # Run Robot Framework Tests - P0 Critical Tests
-              robot --outputdir results/p0 \
-                    --loglevel INFO \
-                    --include P0 \
-                    --name "P0 Critical Tests" \
-                    --variable PLATFORM_NAME:android \
-                    --variable ANDROID_PLATFORM_VERSION:13 \
-                    test-cases/ || true
+            # Run Robot Framework Tests - P0 Critical Tests
+            robot --outputdir results/p0 \
+                  --loglevel INFO \
+                  --include P0 \
+                  --name "P0 Critical Tests" \
+                  --variable PLATFORM_NAME:android \
+                  --variable ANDROID_PLATFORM_VERSION:13 \
+                  test-cases/ || true
 
-              # Run Robot Framework Tests - Login Regression
-              robot --outputdir results/login \
-                    --loglevel INFO \
-                    --include Module:LoginANDRegression \
-                    --name "Login Regression Suite" \
-                    --variable PLATFORM_NAME:android \
-                    --variable ANDROID_PLATFORM_VERSION:13 \
-                    test-cases/login/ || true
+            # Run Robot Framework Tests - Login Regression
+            robot --outputdir results/login \
+                  --loglevel INFO \
+                  --include Module:LoginANDRegression \
+                  --name "Login Regression Suite" \
+                  --variable PLATFORM_NAME:android \
+                  --variable ANDROID_PLATFORM_VERSION:13 \
+                  test-cases/login/ || true
 
-              # Run Robot Framework Tests - Signup Regression
-              robot --outputdir results/signup \
-                    --loglevel INFO \
-                    --include Module:SignupANDRegression \
-                    --name "Signup Regression Suite" \
-                    --variable PLATFORM_NAME:android \
-                    --variable ANDROID_PLATFORM_VERSION:13 \
-                    test-cases/signup/ || true
-            '
+            # Run Robot Framework Tests - Signup Regression
+            robot --outputdir results/signup \
+                  --loglevel INFO \
+                  --include Module:SignupANDRegression \
+                  --name "Signup Regression Suite" \
+                  --variable PLATFORM_NAME:android \
+                  --variable ANDROID_PLATFORM_VERSION:13 \
+                  test-cases/signup/ || true
 
       - name: Generate Combined Robot Framework Report
         if: always()
