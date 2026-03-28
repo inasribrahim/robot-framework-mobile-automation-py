@@ -7,15 +7,6 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
-env:
-  EMULATOR_NAME: test-emulator
-  ANDROID_ARCH: x86_64
-  ANDROID_TARGET: google_apis_playstore
-  API_LEVEL: 33
-  ANDROID_BUILD_TOOLS_VERSION: 33.0.2
-  ANDROID_SDK_PACKAGES: system-images;android-33;google_apis_playstore;x86_64 platform-tools emulator
-  EMULATOR_TIMEOUT: 1600
-
 jobs:
   android-emulator-tests:
     timeout-minutes: 45
@@ -60,33 +51,6 @@ jobs:
           appium driver list --installed
           echo "Appium UIAutomator2 driver installed"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Accept Android SDK Licenses
-        run: |
-          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          echo "Android SDK licenses accepted"
-
-      - name: Install Android SDK Packages
-        run: |
-          $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
-            "system-images;android-33;google_apis_playstore;x86_64" \
-            "platform-tools" \
-            "platforms;android-33" \
-            "build-tools;33.0.2" \
-            "emulator"
-          echo "Android SDK packages installed"
-
-      - name: Create Android Virtual Device (AVD)
-        run: |
-          echo "no" | $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager create avd \
-            -n $EMULATOR_NAME \
-            -k "system-images;android-33;google_apis_playstore;x86_64" \
-            --device "Nexus 6" \
-            --force
-          echo "AVD created: $EMULATOR_NAME"
-
       - name: Download Test APK
         run: |
           mkdir -p apps
@@ -105,126 +69,71 @@ jobs:
 
       - name: Start Appium Server
         run: |
-          appium --log-level info --log appium-server.log &
+          nohup appium --log-level info --log appium-server.log &
           echo $! > appium.pid
           sleep 10
           echo "Appium server started"
-
-      - name: Start Android Emulator
-        run: |
-          nohup $ANDROID_HOME/emulator/emulator \
-            -avd $EMULATOR_NAME \
-            -no-window \
-            -no-audio \
-            -no-boot-anim \
-            -gpu swiftshader_indirect \
-            -camera-back none \
-            -camera-front none \
-            > emulator.log 2>&1 &
-          echo $! > emulator.pid
-          echo "Emulator started in background"
-
-      - name: Wait for Emulator to Boot
-        run: |
-          timeout=600
-          echo "Waiting for emulator to boot (timeout: ${timeout}s)..."
-          SECONDS=0
-          
-          # Wait for device to be detected
-          while [[ "$SECONDS" -lt "$timeout" ]]; do
-            if $ANDROID_HOME/platform-tools/adb devices | grep -m 1 "emulator" > /dev/null; then
-              echo "Emulator device detected!"
-              break
-            fi
-            sleep 5
-          done
-          
-          # Wait for boot to complete
-          SECONDS=0
-          while [[ "$SECONDS" -lt "$timeout" ]]; do
-            boot_completed=$($ANDROID_HOME/platform-tools/adb shell getprop sys.boot_completed 2>&1 | tr -d '\r')
-            if [[ "$boot_completed" == "1" ]]; then
-              echo "Emulator booted successfully!"
-              break
-            fi
-            sleep 5
-          done
-          
-          if [[ "$SECONDS" -ge "$timeout" ]]; then
-            echo "Timeout waiting for emulator to boot"
-            exit 1
-          fi
-          
-          # Additional wait for system to stabilize
-          sleep 10
-
-      - name: Verify Emulator is Ready
-        run: |
-          $ANDROID_HOME/platform-tools/adb devices
-          $ANDROID_HOME/platform-tools/adb shell getprop ro.build.version.release
-          $ANDROID_HOME/platform-tools/adb shell getprop ro.product.model
-          echo "Emulator is ready for testing"
-
-      - name: Unlock Emulator Screen
-        run: |
-          $ANDROID_HOME/platform-tools/adb shell input keyevent 82
-          $ANDROID_HOME/platform-tools/adb shell input keyevent 4
-          sleep 2
-          echo "Emulator screen unlocked"
-
-      - name: Install APK on Emulator
-        run: |
-          $ANDROID_HOME/platform-tools/adb install -r apps/webdriverio-app.apk
-          $ANDROID_HOME/platform-tools/adb shell pm list packages | grep wdiodemoapp
-          echo "APK installed successfully"
 
       - name: Verify Appium Server is Running
         run: |
           curl -s http://localhost:4723/status || (cat appium-server.log && exit 1)
           echo "Appium server is running and responding"
 
-      - name: Run Robot Framework Tests - Smoke Suite
-        run: |
-          robot --outputdir results \
-                --loglevel INFO \
-                --include Smoke \
-                --name "Smoke Test Suite" \
-                --variable PLATFORM_NAME:android \
-                --variable ANDROID_PLATFORM_VERSION:13 \
-                test-cases/
-
-      - name: Run Robot Framework Tests - P0 Critical Tests
-        if: success() || failure()
-        run: |
-          robot --outputdir results/p0 \
-                --loglevel INFO \
-                --include P0 \
-                --name "P0 Critical Tests" \
-                --variable PLATFORM_NAME:android \
-                --variable ANDROID_PLATFORM_VERSION:13 \
-                test-cases/
-
-      - name: Run Robot Framework Tests - Login Regression
-        if: success() || failure()
-        run: |
-          robot --outputdir results/login \
-                --loglevel INFO \
-                --include Module:LoginANDRegression \
-                --name "Login Regression Suite" \
-                --variable PLATFORM_NAME:android \
-                --variable ANDROID_PLATFORM_VERSION:13 \
-                test-cases/login/
-
-      - name: Run Robot Framework Tests - Signup Regression
-        if: success() || failure()
-        run: |
-          robot --outputdir results/signup \
-                --loglevel INFO \
-                --include Module:SignupANDRegression \
-                --name "Signup Regression Suite" \
-                --variable PLATFORM_NAME:android \
-                --variable ANDROID_PLATFORM_VERSION:13 \
-                test-cases/signup/
+      - name: Run Tests on Android Emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          target: google_apis
+          arch: x86_64
+          profile: Nexus 6
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            # Install APK
+            adb install -r apps/webdriverio-app.apk
+            adb shell pm list packages | grep wdiodemoapp
+            echo "APK installed successfully"
+            
+            # Unlock screen
+            adb shell input keyevent 82
+            adb shell input keyevent 4
+            sleep 2
+            
+            # Run Robot Framework Tests - Smoke Suite
+            robot --outputdir results \
+                  --loglevel INFO \
+                  --include Smoke \
+                  --name "Smoke Test Suite" \
+                  --variable PLATFORM_NAME:android \
+                  --variable ANDROID_PLATFORM_VERSION:13 \
+                  test-cases/ || true
+            
+            # Run Robot Framework Tests - P0 Critical Tests
+            robot --outputdir results/p0 \
+                  --loglevel INFO \
+                  --include P0 \
+                  --name "P0 Critical Tests" \
+                  --variable PLATFORM_NAME:android \
+                  --variable ANDROID_PLATFORM_VERSION:13 \
+                  test-cases/ || true
+            
+            # Run Robot Framework Tests - Login Regression
+            robot --outputdir results/login \
+                  --loglevel INFO \
+                  --include Module:LoginANDRegression \
+                  --name "Login Regression Suite" \
+                  --variable PLATFORM_NAME:android \
+                  --variable ANDROID_PLATFORM_VERSION:13 \
+                  test-cases/login/ || true
+            
+            # Run Robot Framework Tests - Signup Regression
+            robot --outputdir results/signup \
+                  --loglevel INFO \
+                  --include Module:SignupANDRegression \
+                  --name "Signup Regression Suite" \
+                  --variable PLATFORM_NAME:android \
+                  --variable ANDROID_PLATFORM_VERSION:13 \
+                  test-cases/signup/ || true
 
       - name: Generate Combined Robot Framework Report
         if: always()
@@ -251,13 +160,12 @@ jobs:
             **/*.png
           retention-days: 30
 
-      - name: Upload Emulator Logs
+      - name: Upload Appium Logs
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: emulator-logs
+          name: appium-logs
           path: |
-            emulator.log
             appium-server.log
           retention-days: 7
 
@@ -267,9 +175,9 @@ jobs:
           echo "## Test Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -f results/combined/report.html ]; then
-            echo "Test execution completed. Download artifacts to view detailed reports." >> $GITHUB_STEP_SUMMARY
+            echo "✅ Test execution completed. Download artifacts to view detailed reports." >> $GITHUB_STEP_SUMMARY
           else
-            echo "Test execution failed or incomplete." >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ Test execution failed or incomplete." >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Cleanup
@@ -279,13 +187,5 @@ jobs:
           if [ -f appium.pid ]; then
             kill $(cat appium.pid) || true
           fi
-          
-          # Stop emulator
-          if [ -f emulator.pid ]; then
-            kill $(cat emulator.pid) || true
-          fi
-          
-          # Kill any remaining processes
-          $ANDROID_HOME/platform-tools/adb emu kill || true
           
           echo "Cleanup completed"
