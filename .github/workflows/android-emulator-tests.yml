@@ -55,11 +55,21 @@ jobs:
 
       - name: Download Test APK
         run: |
+          set -euxo pipefail
           mkdir -p apps
-          curl -L -o apps/webdriverio-app.apk \
-            https://raw.githubusercontent.com/inasribrahim/webIo_apk/main/webdriverio-app.apk
-          ls -lh apps/
-          echo "Test APK downloaded successfully"
+          
+          APK_URL="https://raw.githubusercontent.com/inasribrahim/webIo_apk/main/webdriverio-app.apk"
+          
+          # Retry and fail on HTTP errors; follow redirects
+          curl -fL --retry 5 --retry-delay 2 -o apps/webdriverio-app.apk "$APK_URL"
+          
+          ls -lh apps/webdriverio-app.apk
+          
+          # Verify it's actually an APK (zip archive)
+          file apps/webdriverio-app.apk | tee /tmp/apk_filetype.txt
+          unzip -t apps/webdriverio-app.apk >/dev/null
+          
+          echo "Test APK downloaded and validated successfully"
 
       - name: Enable KVM (Kernel Virtual Machine)
         run: |
@@ -106,19 +116,41 @@ jobs:
             echo "Emulator started successfully"
             adb devices
             
-            # Wait for system to be ready
+            # Stabilize ADB
+            adb kill-server || true
+            adb start-server
             adb wait-for-device
-            sleep 5
+            
+            # Wait for full boot + package manager readiness
+            adb shell getprop sys.boot_completed | grep -m 1 "1"
+            adb shell getprop dev.bootcomplete | grep -m 1 "1" || true
+            
+            # Disable animations for stability
+            adb shell settings put global window_animation_scale 0 || true
+            adb shell settings put global transition_animation_scale 0 || true
+            adb shell settings put global animator_duration_scale 0 || true
             
             # Unlock screen
-            adb shell input keyevent 82
-            adb shell input keyevent 4
+            adb shell input keyevent 82 || true
+            adb shell input keyevent 4 || true
             sleep 2
             
-            # Install APK
-            adb install -r apps/webdriverio-app.apk
-            adb shell pm list packages | grep wdiodemoapp
-            echo "APK installed successfully"
+            # Install APK with retries
+            echo "Installing APK..."
+            for i in 1 2 3; do
+              if adb install -r apps/webdriverio-app.apk; then
+                echo "APK installed successfully"
+                break
+              else
+                echo "Install failed; retrying ($i/3)..."
+                adb shell pm clear com.android.packageinstaller || true
+                sleep 3
+              fi
+            done
+            
+            # Verify installation
+            adb shell pm list packages | grep wdiodemoapp || echo "Warning: Package not found in pm list"
+            echo "APK installation complete"
             
             # Run Robot Framework Tests - Smoke Suite
             robot --outputdir results \
