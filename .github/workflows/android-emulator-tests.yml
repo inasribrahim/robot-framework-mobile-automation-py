@@ -131,18 +131,8 @@ jobs:
 
             # Install APK with retries
             echo "Installing APK..."
-            i=1
-            while [ "$i" -le 3 ]; do
-              if adb install -r apps/wdioNativeDemoApp.apk; then
-                echo "APK installed successfully"
-                break
-              else
-                echo "Install failed; retrying ($i/3)..."
-                adb shell pm clear com.android.packageinstaller || true
-                sleep 3
-                i=$((i + 1))
-              fi
-            done
+            adb install -r apps/wdioNativeDemoApp.apk || { echo "First attempt failed, retrying..."; adb shell pm clear com.android.packageinstaller || true; sleep 3; adb install -r apps/wdioNativeDemoApp.apk; } || { echo "Second attempt failed, retrying..."; adb shell pm clear com.android.packageinstaller || true; sleep 3; adb install -r apps/wdioNativeDemoApp.apk; } || { echo "Third attempt failed"; exit 1; }
+            echo "APK installed successfully"
 
             # Verify installation
             adb shell pm list packages | grep wdiodemoapp || echo "Warning: Package not found in pm list"
