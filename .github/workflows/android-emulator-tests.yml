@@ -148,11 +148,11 @@ jobs:
 
             # Run Robot Framework Tests - Login Regression
             test -d test-cases/login
-            robot --outputdir results/login --loglevel INFO --include Module:LoginANDRegression --name "Login Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases/login || true
+            robot --outputdir results/login --loglevel INFO --include Login&Regression --name "Login Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases/login || true
 
             # Run Robot Framework Tests - Signup Regression
             test -d test-cases/signup
-            robot --outputdir results/signup --loglevel INFO --include Module:SignupANDRegression --name "Signup Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases/signup || true
+            robot --outputdir results/signup --loglevel INFO --include Signup&Regression --name "Signup Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases/signup || true
 
       - name: Generate Combined Robot Framework Report
         if: always()
