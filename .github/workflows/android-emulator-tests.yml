@@ -80,24 +80,36 @@ jobs:
           echo "Appium server is running and responding"
 
       - name: Run Tests on Android Emulator
-        uses: reactivecircus/android-emulator-runner@v2
+        uses: reactivecircus/android-emulator-runner@v2.32.0
         with:
           api-level: 33
           target: google_apis
           arch: x86_64
           profile: Nexus 6
+          force-avd-creation: false
           disable-animations: true
+          disable-spellchecker: true
+          cores: 2
+          ram-size: 4096M
+          heap-size: 512M
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            # Install APK
-            adb install -r apps/webdriverio-app.apk
-            adb shell pm list packages | grep wdiodemoapp
-            echo "APK installed successfully"
+            echo "Emulator started successfully"
+            adb devices
+            
+            # Wait for system to be ready
+            adb wait-for-device
+            sleep 5
             
             # Unlock screen
             adb shell input keyevent 82
             adb shell input keyevent 4
             sleep 2
+            
+            # Install APK
+            adb install -r apps/webdriverio-app.apk
+            adb shell pm list packages | grep wdiodemoapp
+            echo "APK installed successfully"
             
             # Run Robot Framework Tests - Smoke Suite
             robot --outputdir results \
@@ -153,20 +165,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: robot-framework-test-results
-          path: |
-            results/
-            **/*.xml
-            **/*.html
-            **/*.png
+          path: results/
+          if-no-files-found: warn
           retention-days: 30
 
       - name: Upload Appium Logs
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: appium-logs
-          path: |
-            appium-server.log
+          path: appium-server.log
+          if-no-files-found: warn
           retention-days: 7
 
       - name: Publish Test Results Summary
@@ -175,9 +184,9 @@ jobs:
           echo "## Test Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -f results/combined/report.html ]; then
-            echo "✅ Test execution completed. Download artifacts to view detailed reports." >> $GITHUB_STEP_SUMMARY
+            echo "Test execution completed. Download artifacts to view detailed reports." >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ Test execution failed or incomplete." >> $GITHUB_STEP_SUMMARY
+            echo "Test execution failed or incomplete." >> $GITHUB_STEP_SUMMARY
           fi
 
       - name: Cleanup
