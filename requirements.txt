@@ -1,0 +1,28 @@
+# Robot Framework Mobile Automation Dependencies
+# Python 3.9+ required
+
+# Core Robot Framework
+robotframework==7.0
+robotframework-appiumlibrary==2.1.0
+
+# Appium Python Client
+Appium-Python-Client==3.1.0
+
+# Selenium (used by AppiumLibrary)
+selenium==4.16.0
+
+# Utility Libraries
+openpyxl==3.1.2
+Pillow==10.2.0
+requests==2.31.0
+
+# Reporting and Logging
+robotframework-seleniumlibrary==6.2.0
+robotframework-pabot==2.17.0
+
+# Code Quality and Linting (optional for development)
+robotframework-lint==1.1.1
+robotframework-tidy==4.7.0
+
+# Data Management
+python-dateutil==2.8.2
