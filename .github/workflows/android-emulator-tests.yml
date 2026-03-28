@@ -140,19 +140,19 @@ jobs:
 
             # Run Robot Framework Tests - Smoke Suite
             test -d test-cases
-            robot --outputdir results --loglevel INFO --include Smoke --name "Smoke Test Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases || true
+            robot --outputdir results --loglevel INFO --include Smoke --name "Smoke Test Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 --variable ENABLE_VIDEO_RECORDING:True test-cases || true
 
             # Run Robot Framework Tests - P0 Critical Tests
             test -d test-cases
-            robot --outputdir results/p0 --loglevel INFO --include P0 --name "P0 Critical Tests" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases || true
+            robot --outputdir results/p0 --loglevel INFO --include P0 --name "P0 Critical Tests" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 --variable ENABLE_VIDEO_RECORDING:True test-cases || true
 
             # Run Robot Framework Tests - Login Regression
             test -d test-cases/login
-            robot --outputdir results/login --loglevel INFO --name "Login Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases/login || true
+            robot --outputdir results/login --loglevel INFO --name "Login Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 --variable ENABLE_VIDEO_RECORDING:True test-cases/login || true
 
             # Run Robot Framework Tests - Signup Regression
             test -d test-cases/signup
-            robot --outputdir results/signup --loglevel INFO --name "Signup Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases/signup || true
+            robot --outputdir results/signup --loglevel INFO --name "Signup Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 --variable ENABLE_VIDEO_RECORDING:True test-cases/signup || true
 
       - name: Generate Combined Robot Framework Report
         if: always()
