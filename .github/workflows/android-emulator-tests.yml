@@ -139,40 +139,20 @@ jobs:
             echo "APK installation complete"
 
             # Run Robot Framework Tests - Smoke Suite
-            robot --outputdir results \
-                  --loglevel INFO \
-                  --include Smoke \
-                  --name "Smoke Test Suite" \
-                  --variable PLATFORM_NAME:android \
-                  --variable ANDROID_PLATFORM_VERSION:13 \
-                  test-cases/ || true
+            test -d test-cases
+            robot --outputdir results --loglevel INFO --include Smoke --name "Smoke Test Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases || true
 
             # Run Robot Framework Tests - P0 Critical Tests
-            robot --outputdir results/p0 \
-                  --loglevel INFO \
-                  --include P0 \
-                  --name "P0 Critical Tests" \
-                  --variable PLATFORM_NAME:android \
-                  --variable ANDROID_PLATFORM_VERSION:13 \
-                  test-cases/ || true
+            test -d test-cases
+            robot --outputdir results/p0 --loglevel INFO --include P0 --name "P0 Critical Tests" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases || true
 
             # Run Robot Framework Tests - Login Regression
-            robot --outputdir results/login \
-                  --loglevel INFO \
-                  --include Module:LoginANDRegression \
-                  --name "Login Regression Suite" \
-                  --variable PLATFORM_NAME:android \
-                  --variable ANDROID_PLATFORM_VERSION:13 \
-                  test-cases/login/ || true
+            test -d test-cases/login
+            robot --outputdir results/login --loglevel INFO --include Module:LoginANDRegression --name "Login Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases/login || true
 
             # Run Robot Framework Tests - Signup Regression
-            robot --outputdir results/signup \
-                  --loglevel INFO \
-                  --include Module:SignupANDRegression \
-                  --name "Signup Regression Suite" \
-                  --variable PLATFORM_NAME:android \
-                  --variable ANDROID_PLATFORM_VERSION:13 \
-                  test-cases/signup/ || true
+            test -d test-cases/signup
+            robot --outputdir results/signup --loglevel INFO --include Module:SignupANDRegression --name "Signup Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 test-cases/signup || true
 
       - name: Generate Combined Robot Framework Report
         if: always()
