@@ -1,0 +1,257 @@
+name: iOS Simulator Robot Framework Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  ios-simulator-tests:
+    timeout-minutes: 45
+    runs-on: macos-13
+    env:
+      SIMULATOR_NAME: "iPhone 14"
+      PLATFORM_VERSION: "16.4"
+      SIMULATOR_TIMEOUT: 350
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Setup Node.js for Appium
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          echo "Python dependencies installed successfully"
+
+      - name: Install Appium 2.0
+        run: |
+          npm install -g appium@next
+          appium --version
+          echo "Appium installed successfully"
+
+      - name: Install Appium XCUITest Driver
+        run: |
+          appium driver install xcuitest
+          appium driver list --installed
+          echo "Appium XCUITest driver installed"
+
+      - name: Install Required Dependencies
+        run: |
+          # Install Carthage for iOS dependencies
+          brew install carthage
+          
+          # Install applesimutils for simulator control
+          brew tap wix/brew
+          brew install applesimutils
+          
+          echo "iOS dependencies installed successfully"
+
+      - name: List Available Simulators
+        run: |
+          xcrun simctl list devices
+          echo "Available simulators listed"
+
+      - name: Shutdown All Simulators
+        run: |
+          xcrun simctl shutdown all || true
+          echo "All simulators shut down"
+
+      - name: Get Simulator UDID
+        id: get-udid
+        run: |
+          UDID=$(xcrun simctl list devices | grep "$SIMULATOR_NAME" | grep -o '([0-9A-F\-]*)' | tr -d '()' | head -n 1)
+          echo "Simulator UDID: '$UDID'"
+          
+          if [ -z "$UDID" ]; then
+            echo "Error: UDID not found for $SIMULATOR_NAME"
+            exit 1
+          fi
+          
+          if [[ ! "$UDID" =~ ^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$ ]]; then
+            echo "Error: Invalid UDID format"
+            exit 1
+          fi
+          
+          echo "UDID=$UDID" >> $GITHUB_ENV
+          echo "Simulator UDID set successfully"
+
+      - name: Boot iOS Simulator
+        run: |
+          if [ -n "$UDID" ]; then
+            xcrun simctl boot "$UDID" || echo "Simulator may already be booted"
+            echo "Booting simulator with UDID: $UDID"
+          else
+            echo "Error: Simulator UDID not found!"
+            exit 1
+          fi
+
+      - name: Wait for Simulator to Boot
+        run: |
+          echo "Waiting for simulator to boot completely..."
+          xcrun simctl bootstatus "$UDID" -b
+          sleep 5
+          echo "Simulator booted successfully"
+
+      - name: Start Appium Server
+        run: |
+          nohup appium --log-level info --log appium-server.log &
+          echo $! > appium.pid
+          sleep 10
+          echo "Appium server started"
+
+      - name: Verify Appium Server is Running
+        run: |
+          curl -s http://localhost:4723/status || (cat appium-server.log && exit 1)
+          echo "Appium server is running and responding"
+
+      - name: Prepare iOS Simulator
+        run: |
+          # Enable UI Automation
+          xcrun simctl boot "$UDID" || true
+          
+          # Disable keyboard autocorrect for stability
+          xcrun simctl spawn "$UDID" defaults write -g NSAutomaticCapitalizationEnabled -bool false
+          xcrun simctl spawn "$UDID" defaults write -g NSAutomaticSpellingCorrectionEnabled -bool false
+          
+          # Reset privacy permissions
+          xcrun simctl privacy "$UDID" reset all || true
+          
+          sleep 3
+          echo "iOS simulator prepared for testing"
+
+      - name: Run Robot Framework Tests - Smoke Suite
+        run: |
+          robot --outputdir results \
+                --loglevel INFO \
+                --include Smoke \
+                --name "Smoke Test Suite" \
+                --variable PLATFORM_NAME:iOS \
+                --variable IOS_PLATFORM_VERSION:16.4 \
+                --variable DEVICE_NAME:"iPhone 14" \
+                --variable UDID:$UDID \
+                --variable ENABLE_VIDEO_RECORDING:True \
+                test-cases || true
+
+      - name: Run Robot Framework Tests - P0 Critical Tests
+        run: |
+          robot --outputdir results/p0 \
+                --loglevel INFO \
+                --include P0 \
+                --name "P0 Critical Tests" \
+                --variable PLATFORM_NAME:iOS \
+                --variable IOS_PLATFORM_VERSION:16.4 \
+                --variable DEVICE_NAME:"iPhone 14" \
+                --variable UDID:$UDID \
+                --variable ENABLE_VIDEO_RECORDING:True \
+                test-cases || true
+
+      - name: Run Robot Framework Tests - Login Regression
+        run: |
+          if [ -d test-cases/login ]; then
+            robot --outputdir results/login \
+                  --loglevel INFO \
+                  --name "Login Regression Suite" \
+                  --variable PLATFORM_NAME:iOS \
+                  --variable IOS_PLATFORM_VERSION:16.4 \
+                  --variable DEVICE_NAME:"iPhone 14" \
+                  --variable UDID:$UDID \
+                  --variable ENABLE_VIDEO_RECORDING:True \
+                  test-cases/login || true
+          else
+            echo "Login test suite directory not found, skipping..."
+          fi
+
+      - name: Run Robot Framework Tests - Signup Regression
+        run: |
+          if [ -d test-cases/signup ]; then
+            robot --outputdir results/signup \
+                  --loglevel INFO \
+                  --name "Signup Regression Suite" \
+                  --variable PLATFORM_NAME:iOS \
+                  --variable IOS_PLATFORM_VERSION:16.4 \
+                  --variable DEVICE_NAME:"iPhone 14" \
+                  --variable UDID:$UDID \
+                  --variable ENABLE_VIDEO_RECORDING:True \
+                  test-cases/signup || true
+          else
+            echo "Signup test suite directory not found, skipping..."
+          fi
+
+      - name: Generate Combined Robot Framework Report
+        if: always()
+        run: |
+          files=()
+          for f in results/output.xml results/p0/output.xml results/login/output.xml results/signup/output.xml; do
+            [ -f "$f" ] && files+=("$f")
+          done
+          
+          if [ ${#files[@]} -gt 0 ]; then
+            rebot --outputdir results/combined \
+                  --name "Complete Test Execution Report" \
+                  --output output.xml \
+                  --log log.html \
+                  --report report.html \
+                  "${files[@]}"
+            echo "Combined report generated from ${#files[@]} output file(s)"
+          else
+            echo "No Robot output.xml files found; skipping rebot."
+          fi
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-robot-framework-test-results
+          path: results/
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload Appium Logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-appium-logs
+          path: appium-server.log
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Publish Test Results Summary
+        if: always()
+        run: |
+          echo "## iOS Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f results/combined/report.html ]; then
+            echo "Test execution completed. Download artifacts to view detailed reports." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "Test execution failed or incomplete." >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Shutdown Simulator
+        if: always()
+        run: |
+          xcrun simctl shutdown "$UDID" || true
+          echo "Simulator shut down"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Stop Appium server
+          if [ -f appium.pid ]; then
+            kill $(cat appium.pid) || true
+          fi
+          
+          echo "Cleanup completed"

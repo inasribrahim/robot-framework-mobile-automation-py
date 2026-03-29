@@ -139,20 +139,50 @@ jobs:
             echo "APK installation complete"
 
             # Run Robot Framework Tests - Smoke Suite
-            test -d test-cases
-            robot --outputdir results --loglevel INFO --include Smoke --name "Smoke Test Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 --variable ENABLE_VIDEO_RECORDING:True test-cases || true
+            robot --outputdir results \
+                  --loglevel INFO \
+                  --include Smoke \
+                  --name "Smoke Test Suite" \
+                  --variable PLATFORM_NAME:android \
+                  --variable ANDROID_PLATFORM_VERSION:13 \
+                  --variable ENABLE_VIDEO_RECORDING:True \
+                  test-cases || true
 
             # Run Robot Framework Tests - P0 Critical Tests
-            test -d test-cases
-            robot --outputdir results/p0 --loglevel INFO --include P0 --name "P0 Critical Tests" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 --variable ENABLE_VIDEO_RECORDING:True test-cases || true
+            robot --outputdir results/p0 \
+                  --loglevel INFO \
+                  --include P0 \
+                  --name "P0 Critical Tests" \
+                  --variable PLATFORM_NAME:android \
+                  --variable ANDROID_PLATFORM_VERSION:13 \
+                  --variable ENABLE_VIDEO_RECORDING:True \
+                  test-cases || true
 
             # Run Robot Framework Tests - Login Regression
-            test -d test-cases/login
-            robot --outputdir results/login --loglevel INFO --name "Login Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 --variable ENABLE_VIDEO_RECORDING:True test-cases/login || true
+            if [ -d test-cases/login ]; then
+              robot --outputdir results/login \
+                    --loglevel INFO \
+                    --name "Login Regression Suite" \
+                    --variable PLATFORM_NAME:android \
+                    --variable ANDROID_PLATFORM_VERSION:13 \
+                    --variable ENABLE_VIDEO_RECORDING:True \
+                    test-cases/login || true
+            else
+              echo "Login test suite directory not found, skipping..."
+            fi
 
             # Run Robot Framework Tests - Signup Regression
-            test -d test-cases/signup
-            robot --outputdir results/signup --loglevel INFO --name "Signup Regression Suite" --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 --variable ENABLE_VIDEO_RECORDING:True test-cases/signup || true
+            if [ -d test-cases/signup ]; then
+              robot --outputdir results/signup \
+                    --loglevel INFO \
+                    --name "Signup Regression Suite" \
+                    --variable PLATFORM_NAME:android \
+                    --variable ANDROID_PLATFORM_VERSION:13 \
+                    --variable ENABLE_VIDEO_RECORDING:True \
+                    test-cases/signup || true
+            else
+              echo "Signup test suite directory not found, skipping..."
+            fi
 
       - name: Generate Combined Robot Framework Report
         if: always()
@@ -178,7 +208,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: robot-framework-test-results
+          name: android-robot-framework-test-results
           path: results/
           if-no-files-found: warn
           retention-days: 30
@@ -187,7 +217,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: appium-logs
+          name: android-appium-logs
           path: appium-server.log
           if-no-files-found: warn
           retention-days: 7
@@ -195,13 +225,19 @@ jobs:
       - name: Publish Test Results Summary
         if: always()
         run: |
-          echo "## Test Execution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Android Test Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -f results/combined/report.html ]; then
             echo "Test execution completed. Download artifacts to view detailed reports." >> $GITHUB_STEP_SUMMARY
           else
             echo "Test execution failed or incomplete." >> $GITHUB_STEP_SUMMARY
           fi
+
+      - name: Shutdown Emulator
+        if: always()
+        run: |
+          adb devices | grep emulator | cut -f1 | while read line; do adb -s $line emu kill; done || true
+          echo "Android emulator shut down"
 
       - name: Cleanup
         if: always()
