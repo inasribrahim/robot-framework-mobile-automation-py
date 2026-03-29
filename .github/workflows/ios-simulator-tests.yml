@@ -152,41 +152,41 @@ jobs:
       - name: Start Appium Server
         run: |
           set -euo pipefail
+
+          # Ensure the log file exists even if appium fails early
           : > appium-server.log
 
-          # Start Appium and capture *all* output to the log
-          nohup appium --address 127.0.0.1 --port 4723 --log-level info > appium-server.log 2>&1 &
+          # Bind explicitly and write logs to the file
+          nohup appium \
+            --address 127.0.0.1 \
+            --port 4723 \
+            --base-path / \
+            --log-level debug \
+            --log appium-server.log \
+            > appium-stdout.log 2>&1 &
+
           echo $! > appium.pid
 
-          echo "Appium PID: $(cat appium.pid)"
-          sleep 2
-
-          # If Appium died instantly, show logs and fail early
-          if ! ps -p "$(cat appium.pid)" >/dev/null 2>&1; then
-            echo "Appium process is not running."
-            echo "---- appium-server.log ----"
-            cat appium-server.log || true
-            exit 1
-          fi
-
-      - name: Verify Appium Server is Running
-        run: |
-          set -euo pipefail
-          # Retry for up to ~30s
-          for i in {1..15}; do
-            if curl -sf http://localhost:4723/status >/dev/null; then
-              echo "Appium server is running and responding"
+          # Wait up to ~60s for Appium to respond
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4723/status >/dev/null; then
+              echo "Appium is up"
               exit 0
             fi
             sleep 2
           done
 
-          echo "Appium did not become ready."
-          echo "---- appium-server.log ----"
-          cat appium-server.log || true
-          echo "---- Listening ports (4723) ----"
-          lsof -nP -iTCP:4723 -sTCP:LISTEN || true
+          echo "Appium did not become ready in time"
+          echo "==== appium-server.log ===="
+          tail -n 200 appium-server.log || true
+          echo "==== appium-stdout.log ===="
+          tail -n 200 appium-stdout.log || true
           exit 1
+
+      - name: Verify Appium Server is Running
+        run: |
+          curl -fsS http://127.0.0.1:4723/status
+          echo "Appium server is running and responding"
 
       - name: Prepare iOS Simulator
         run: |
@@ -295,7 +295,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-appium-logs
-          path: appium-server.log
+          path: |
+            appium-server.log
+            appium-stdout.log
           if-no-files-found: warn
           retention-days: 7
 
