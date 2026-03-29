@@ -10,10 +10,10 @@ on:
 jobs:
   ios-simulator-tests:
     timeout-minutes: 45
-    runs-on: macos-13
+    runs-on: macos-latest
     env:
-      SIMULATOR_NAME: "iPhone 14"
-      PLATFORM_VERSION: "16.4"
+      SIMULATOR_NAME: "iPhone 15"
+      PLATFORM_VERSION: "17.0"
       SIMULATOR_TIMEOUT: 350
 
     steps:
@@ -140,8 +140,8 @@ jobs:
                 --include Smoke \
                 --name "Smoke Test Suite" \
                 --variable PLATFORM_NAME:iOS \
-                --variable IOS_PLATFORM_VERSION:16.4 \
-                --variable DEVICE_NAME:"iPhone 14" \
+                --variable IOS_PLATFORM_VERSION:17.0 \
+                --variable DEVICE_NAME:"iPhone 15" \
                 --variable UDID:$UDID \
                 --variable ENABLE_VIDEO_RECORDING:True \
                 test-cases || true
@@ -153,8 +153,8 @@ jobs:
                 --include P0 \
                 --name "P0 Critical Tests" \
                 --variable PLATFORM_NAME:iOS \
-                --variable IOS_PLATFORM_VERSION:16.4 \
-                --variable DEVICE_NAME:"iPhone 14" \
+                --variable IOS_PLATFORM_VERSION:17.0 \
+                --variable DEVICE_NAME:"iPhone 15" \
                 --variable UDID:$UDID \
                 --variable ENABLE_VIDEO_RECORDING:True \
                 test-cases || true
@@ -166,8 +166,8 @@ jobs:
                   --loglevel INFO \
                   --name "Login Regression Suite" \
                   --variable PLATFORM_NAME:iOS \
-                  --variable IOS_PLATFORM_VERSION:16.4 \
-                  --variable DEVICE_NAME:"iPhone 14" \
+                  --variable IOS_PLATFORM_VERSION:17.0 \
+                  --variable DEVICE_NAME:"iPhone 15" \
                   --variable UDID:$UDID \
                   --variable ENABLE_VIDEO_RECORDING:True \
                   test-cases/login || true
@@ -182,8 +182,8 @@ jobs:
                   --loglevel INFO \
                   --name "Signup Regression Suite" \
                   --variable PLATFORM_NAME:iOS \
-                  --variable IOS_PLATFORM_VERSION:16.4 \
-                  --variable DEVICE_NAME:"iPhone 14" \
+                  --variable IOS_PLATFORM_VERSION:17.0 \
+                  --variable DEVICE_NAME:"iPhone 15" \
                   --variable UDID:$UDID \
                   --variable ENABLE_VIDEO_RECORDING:True \
                   test-cases/signup || true
