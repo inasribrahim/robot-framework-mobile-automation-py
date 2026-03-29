@@ -101,11 +101,20 @@ jobs:
           echo "Using runtime: $RUNTIME_ID"
 
           # Try to find an existing simulator by name (any state)
-          UDID=$(xcrun simctl list devices available |
-            awk -v name="$SIMULATOR_NAME" '
-              $0 ~ name {
-                match($0, /\(([0-9A-Fa-f-]+)\)/, a); print a[1]; exit
-              }')
+          UDID=$(
+          python - <<'PY'
+import json, subprocess, os, sys
+name = os.environ["SIMULATOR_NAME"]
+out = subprocess.check_output(["xcrun","simctl","list","devices","available","-j"], text=True)
+data = json.loads(out)
+for runtime, devices in data.get("devices", {}).items():
+    for d in devices:
+        if d.get("name") == name:
+            print(d.get("udid",""))
+            sys.exit(0)
+print("")
+PY
+          )
 
           # If not found, create it
           if [ -z "${UDID:-}" ]; then
