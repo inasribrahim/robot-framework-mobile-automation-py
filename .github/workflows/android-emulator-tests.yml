@@ -1,11 +1,15 @@
 name: Android Emulator Robot Framework Tests
 
+# Trigger configuration:
+# - Manual trigger only (workflow_dispatch) - run via GitHub Actions UI
+# - Automatic triggers (push/pull_request) are disabled for resource optimization
+# - To re-enable automatic triggers, uncomment the push and pull_request sections below
 on:
-  push:
-    branches: [main, master]
-  pull_request:
-    branches: [main, master]
-  workflow_dispatch:
+  # push:
+  #   branches: [main, master]
+  # pull_request:
+  #   branches: [main, master]
+  workflow_dispatch:  # Manual trigger via GitHub Actions UI
 
 jobs:
   android-emulator-tests:
