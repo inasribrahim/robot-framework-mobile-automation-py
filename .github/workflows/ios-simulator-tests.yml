@@ -70,24 +70,71 @@ jobs:
           xcrun simctl shutdown all || true
           echo "All simulators shut down"
 
-      - name: Get Simulator UDID
+      - name: Get/Create Simulator UDID
         id: get-udid
         run: |
-          UDID=$(xcrun simctl list devices | grep "$SIMULATOR_NAME" | grep -o '([0-9A-F\-]*)' | tr -d '()' | head -n 1)
-          echo "Simulator UDID: '$UDID'"
-          
-          if [ -z "$UDID" ]; then
-            echo "Error: UDID not found for $SIMULATOR_NAME"
+          set -euo pipefail
+
+          echo "Xcode version:"
+          xcodebuild -version
+
+          echo "Available runtimes:"
+          xcrun simctl list runtimes
+
+          # Pick an available iOS runtime (prefer the requested major/minor if present)
+          RUNTIME_ID=$(xcrun simctl list runtimes |
+            awk -v ver="${PLATFORM_VERSION}" '
+              $0 ~ /iOS/ && $0 ~ ver { print $NF }
+            ' | tr -d '()' | head -n 1)
+
+          # Fallback to the latest available iOS runtime if exact version not found
+          if [ -z "${RUNTIME_ID:-}" ]; then
+            RUNTIME_ID=$(xcrun simctl list runtimes |
+              awk '/iOS/ { print $NF }' | tr -d '()' | tail -n 1)
+          fi
+
+          if [ -z "${RUNTIME_ID:-}" ]; then
+            echo "Error: No iOS runtimes found on runner."
             exit 1
           fi
-          
-          if [[ ! "$UDID" =~ ^[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}$ ]]; then
-            echo "Error: Invalid UDID format"
+
+          echo "Using runtime: $RUNTIME_ID"
+
+          # Try to find an existing simulator by name (any state)
+          UDID=$(xcrun simctl list devices available |
+            awk -v name="$SIMULATOR_NAME" '
+              $0 ~ name {
+                match($0, /\(([0-9A-Fa-f-]+)\)/, a); print a[1]; exit
+              }')
+
+          # If not found, create it
+          if [ -z "${UDID:-}" ]; then
+            echo "Simulator '$SIMULATOR_NAME' not found. Creating..."
+            UDID=$(xcrun simctl create "$SIMULATOR_NAME" "com.apple.CoreSimulator.SimDeviceType.$(echo "$SIMULATOR_NAME" | tr " " "-")" "$RUNTIME_ID" || true)
+          fi
+
+          # If create via guessed type failed, fall back to a known device type id
+          if [ -z "${UDID:-}" ]; then
+            DEVICE_TYPE_ID=$(xcrun simctl list devicetypes |
+              awk -v name="$SIMULATOR_NAME" '$0 ~ name { print $NF }' | tr -d '()' | head -n 1)
+
+            if [ -z "${DEVICE_TYPE_ID:-}" ]; then
+              echo "Error: Could not find device type for '$SIMULATOR_NAME'."
+              echo "Available device types:"
+              xcrun simctl list devicetypes
+              exit 1
+            fi
+
+            UDID=$(xcrun simctl create "$SIMULATOR_NAME" "$DEVICE_TYPE_ID" "$RUNTIME_ID")
+          fi
+
+          echo "Simulator UDID: $UDID"
+          if [ -z "${UDID:-}" ]; then
+            echo "Error: UDID still empty after create/find."
             exit 1
           fi
-          
-          echo "UDID=$UDID" >> $GITHUB_ENV
-          echo "Simulator UDID set successfully"
+
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
 
       - name: Boot iOS Simulator
         run: |
