@@ -37,9 +37,9 @@ jobs:
           pip install -r requirements.txt
           echo "Python dependencies installed successfully"
 
-      - name: Install Appium 2.0
+      - name: Install Appium
         run: |
-          npm install -g appium@next
+          npm install -g appium@latest
           appium --version
           echo "Appium installed successfully"
 
@@ -164,6 +164,7 @@ jobs:
 
           # Ensure the log file exists even if appium fails early
           : > appium-server.log
+          : > appium-stdout.log
 
           # Bind explicitly and write logs to the file
           nohup appium \
@@ -176,9 +177,18 @@ jobs:
 
           echo $! > appium.pid
 
-          # Wait up to ~60s for Appium to respond
-          for i in {1..30}; do
-            if curl -fsS http://127.0.0.1:4723/status >/dev/null; then
+          # Wait for the server process, listener log, and HTTP status endpoint
+          for i in {1..45}; do
+            if ! kill -0 "$(cat appium.pid)" 2>/dev/null; then
+              echo "Appium process exited before becoming ready"
+              echo "==== appium-server.log ===="
+              tail -n 200 appium-server.log || true
+              echo "==== appium-stdout.log ===="
+              tail -n 200 appium-stdout.log || true
+              exit 1
+            fi
+
+            if grep -q "Appium REST http interface listener started" appium-server.log && curl -fsS http://127.0.0.1:4723/status >/dev/null; then
               echo "Appium is up"
               exit 0
             fi
