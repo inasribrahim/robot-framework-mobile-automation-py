@@ -230,14 +230,22 @@ jobs:
 
       - name: Install iOS App on Simulator
         run: |
-          echo "Installing wdioNativeDemoApp on simulator..."
-          xcrun simctl install "$UDID" "$GITHUB_WORKSPACE/apps/wdioNativeDemoApp.app"
+          set -euo pipefail
+          APP_PATH="$GITHUB_WORKSPACE/apps/wdioNativeDemoApp.app"
+
+          # Extract the real bundle ID from the app's Info.plist
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$APP_PATH/Info.plist")
+          echo "Detected bundle ID: $BUNDLE_ID"
+          echo "IOS_BUNDLE_ID=$BUNDLE_ID" >> "$GITHUB_ENV"
+
+          # Install on the booted simulator
+          xcrun simctl install "$UDID" "$APP_PATH"
           echo "App installed successfully"
-          
-          # Verify app is installed (use 'app' container, not 'system')
-          xcrun simctl get_app_container "$UDID" "com.wdiodemoapp" app || \
-            echo "WARNING: Could not find app container — verifying via app list..."
-          xcrun simctl listapps "$UDID" | python3 -c "import sys, json; apps=json.load(sys.stdin); found=[b for b in apps if 'wdio' in b.lower() or 'wdiodemoapp' in b.lower()]; print('Found bundle IDs:', found) if found else print('WARNING: com.wdiodemoapp not found in installed apps')" || true
+
+          # Verify installation using the real bundle ID
+          CONTAINER=$(xcrun simctl get_app_container "$UDID" "$BUNDLE_ID" app 2>&1) && \
+            echo "App container verified: $CONTAINER" || \
+            echo "WARNING: Could not verify app container for $BUNDLE_ID"
 
       - name: Run Robot Framework Tests - Smoke Suite
         run: |
@@ -249,6 +257,7 @@ jobs:
                 --variable IOS_PLATFORM_VERSION:${IOS_PLATFORM_VERSION} \
                 --variable DEVICE_NAME:"iPhone 15" \
                 --variable UDID:$UDID \
+                --variable IOS_APP_BUNDLE_ID:${IOS_BUNDLE_ID} \
                 --variable ENABLE_VIDEO_RECORDING:True \
                 test-cases || true
 
@@ -262,6 +271,7 @@ jobs:
                 --variable IOS_PLATFORM_VERSION:${IOS_PLATFORM_VERSION} \
                 --variable DEVICE_NAME:"iPhone 15" \
                 --variable UDID:$UDID \
+                --variable IOS_APP_BUNDLE_ID:${IOS_BUNDLE_ID} \
                 --variable ENABLE_VIDEO_RECORDING:True \
                 test-cases || true
 
@@ -275,6 +285,7 @@ jobs:
                   --variable IOS_PLATFORM_VERSION:${IOS_PLATFORM_VERSION} \
                   --variable DEVICE_NAME:"iPhone 15" \
                   --variable UDID:$UDID \
+                  --variable IOS_APP_BUNDLE_ID:${IOS_BUNDLE_ID} \
                   --variable ENABLE_VIDEO_RECORDING:True \
                   test-cases/login || true
           else
@@ -291,6 +302,7 @@ jobs:
                   --variable IOS_PLATFORM_VERSION:${IOS_PLATFORM_VERSION} \
                   --variable DEVICE_NAME:"iPhone 15" \
                   --variable UDID:$UDID \
+                  --variable IOS_APP_BUNDLE_ID:${IOS_BUNDLE_ID} \
                   --variable ENABLE_VIDEO_RECORDING:True \
                   test-cases/signup || true
           else
