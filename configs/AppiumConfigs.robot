@@ -28,8 +28,8 @@ ${IOS_APP}                        ${CURDIR}/../apps/wdioNativeDemoApp.app
 ${IOS_PLATFORM_NAME}              ios
 ${IOS_PLATFORM_VERSION}           %{IOS_PLATFORM_VERSION=16.1}
 ${IOS_APP_BUNDLE_ID}              com.wdiodemoapp
-${IOS_DEVICE_NAME}                iPhone 14
-${IOS_DEVICE_UDID}                auto
+${IOS_DEVICE_NAME}                %{DEVICE_NAME=iPhone 14}
+${IOS_DEVICE_UDID}                %{UDID=auto}
 
 # Appium Capabilities - Common
 ${AUTO_GRANT_PERMISSIONS}         true

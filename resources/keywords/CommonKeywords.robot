@@ -68,6 +68,7 @@ Open IOS Application
     ...    platformName=${IOS_PLATFORM_NAME}
     ...    platformVersion=${IOS_PLATFORM_VERSION}
     ...    deviceName=${IOS_DEVICE_NAME}
+    ...    udid=${IOS_DEVICE_UDID}
     ...    app=${IOS_APP}
     ...    bundleId=${IOS_APP_BUNDLE_ID}
     ...    autoAcceptAlerts=${AUTO_ACCEPT_ALERTS}
