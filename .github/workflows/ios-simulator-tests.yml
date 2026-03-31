@@ -228,6 +228,15 @@ jobs:
           sleep 3
           echo "iOS simulator prepared for testing"
 
+      - name: Install iOS App on Simulator
+        run: |
+          echo "Installing wdioNativeDemoApp on simulator..."
+          xcrun simctl install "$UDID" "apps/wdioNativeDemoApp.app"
+          echo "App installed successfully"
+          
+          # Verify app is installed
+          xcrun simctl get_app_container "$UDID" "com.wdiodemoapp" system || true
+
       - name: Run Robot Framework Tests - Smoke Suite
         run: |
           robot --outputdir results \
