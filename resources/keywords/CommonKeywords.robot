@@ -72,6 +72,13 @@ Open IOS Application
     ...    app=${IOS_APP}
     ...    bundleId=${IOS_APP_BUNDLE_ID}
     ...    autoAcceptAlerts=${AUTO_ACCEPT_ALERTS}
+    ...    showXcodeLog=${IOS_SHOW_IOS_LOG}
+    ...    useNewWDA=${IOS_USE_NEW_WDA}
+    ...    wdaStartupRetries=${IOS_WDA_STARTUP_RETRIES}
+    ...    wdaStartupRetryInterval=${IOS_WDA_STARTUP_RETRY_INTERVAL}
+    ...    wdaLaunchTimeout=${IOS_WDA_LAUNCH_TIMEOUT}
+    ...    wdaConnectionTimeout=${IOS_WDA_CONNECTION_TIMEOUT}
+    ...    derivedDataPath=${IOS_DERIVED_DATA_PATH}
     ...    noReset=${NO_RESET}
     ...    fullReset=${FULL_RESET}
     ...    newCommandTimeout=${NEW_COMMAND_TIMEOUT}

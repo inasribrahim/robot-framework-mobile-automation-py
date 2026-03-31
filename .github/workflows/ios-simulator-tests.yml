@@ -201,6 +201,12 @@ jobs:
         run: |
           # Enable UI Automation
           xcrun simctl boot "$UDID" || true
+
+          # Open the Simulator UI so CoreSimulator services are fully initialized
+          open -a Simulator || true
+
+          # Clear stale WebDriverAgent build products on ephemeral runners
+          rm -rf /tmp/appium-webdriveragent || true
           
           # Disable keyboard autocorrect for stability
           xcrun simctl spawn "$UDID" defaults write -g NSAutomaticCapitalizationEnabled -bool false
