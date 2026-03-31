@@ -231,11 +231,13 @@ jobs:
       - name: Install iOS App on Simulator
         run: |
           echo "Installing wdioNativeDemoApp on simulator..."
-          xcrun simctl install "$UDID" "apps/wdioNativeDemoApp.app"
+          xcrun simctl install "$UDID" "$GITHUB_WORKSPACE/apps/wdioNativeDemoApp.app"
           echo "App installed successfully"
           
-          # Verify app is installed
-          xcrun simctl get_app_container "$UDID" "com.wdiodemoapp" system || true
+          # Verify app is installed (use 'app' container, not 'system')
+          xcrun simctl get_app_container "$UDID" "com.wdiodemoapp" app || \
+            echo "WARNING: Could not find app container — verifying via app list..."
+          xcrun simctl listapps "$UDID" | python3 -c "import sys, json; apps=json.load(sys.stdin); found=[b for b in apps if 'wdio' in b.lower() or 'wdiodemoapp' in b.lower()]; print('Found bundle IDs:', found) if found else print('WARNING: com.wdiodemoapp not found in installed apps')" || true
 
       - name: Run Robot Framework Tests - Smoke Suite
         run: |
