@@ -209,7 +209,7 @@ jobs:
                 --loglevel INFO \
                 --include Smoke \
                 --name "Smoke Test Suite" \
-                --variable PLATFORM_NAME:IOS \
+                --variable PLATFORM_NAME:ios \
                 --variable IOS_PLATFORM_VERSION:17.0 \
                 --variable DEVICE_NAME:"iPhone 15" \
                 --variable UDID:$UDID \
@@ -222,7 +222,7 @@ jobs:
                 --loglevel INFO \
                 --include P0 \
                 --name "P0 Critical Tests" \
-                --variable PLATFORM_NAME:IOS \
+                --variable PLATFORM_NAME:ios \
                 --variable IOS_PLATFORM_VERSION:17.0 \
                 --variable DEVICE_NAME:"iPhone 15" \
                 --variable UDID:$UDID \
@@ -235,7 +235,7 @@ jobs:
             robot --outputdir results/login \
                   --loglevel INFO \
                   --name "Login Regression Suite" \
-                  --variable PLATFORM_NAME:IOS \
+                  --variable PLATFORM_NAME:ios \
                   --variable IOS_PLATFORM_VERSION:17.0 \
                   --variable DEVICE_NAME:"iPhone 15" \
                   --variable UDID:$UDID \
@@ -251,7 +251,7 @@ jobs:
             robot --outputdir results/signup \
                   --loglevel INFO \
                   --name "Signup Regression Suite" \
-                  --variable PLATFORM_NAME:IOS \
+                  --variable PLATFORM_NAME:ios \
                   --variable IOS_PLATFORM_VERSION:17.0 \
                   --variable DEVICE_NAME:"iPhone 15" \
                   --variable UDID:$UDID \

@@ -22,8 +22,12 @@ Open Test Application
     ...                Takes screenshot on failure for debugging
     [Tags]            setup    initialization
     
-    Run Keyword If    '${PLATFORM_NAME}' == '${ANDROID_PLATFORM_NAME}'    Open Android Application
-    ...    ELSE IF    '${PLATFORM_NAME}' == '${IOS_PLATFORM_NAME}'        Open IOS Application
+    ${platform_normalized}=    Convert To Lower Case    ${PLATFORM_NAME}
+    ${android_normalized}=     Convert To Lower Case    ${ANDROID_PLATFORM_NAME}
+    ${ios_normalized}=         Convert To Lower Case    ${IOS_PLATFORM_NAME}
+
+    Run Keyword If    '${platform_normalized}' == '${android_normalized}'    Open Android Application
+    ...    ELSE IF    '${platform_normalized}' == '${ios_normalized}'        Open IOS Application
     ...    ELSE       Fail    Invalid platform name: ${PLATFORM_NAME}
     
     # Register automatic screenshot capture on test failure
