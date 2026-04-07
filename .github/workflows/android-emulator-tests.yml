@@ -142,48 +142,25 @@ jobs:
             adb shell pm list packages | grep wdiodemoapp || echo "Warning: Package not found in pm list"
             echo "APK installation complete"
 
+            # Common Robot Framework arguments
+            ROBOT_COMMON_ARGS="--loglevel INFO --variable PLATFORM_NAME:android --variable ANDROID_PLATFORM_VERSION:13 --variable ENABLE_VIDEO_RECORDING:True"
+
             # Run Robot Framework Tests - Smoke Suite
-            robot --outputdir results \
-                  --loglevel INFO \
-                  --include Smoke \
-                  --name "Smoke Test Suite" \
-                  --variable PLATFORM_NAME:android \
-                  --variable ANDROID_PLATFORM_VERSION:13 \
-                  --variable ENABLE_VIDEO_RECORDING:True \
-                  test-cases || true
+            robot --outputdir results $ROBOT_COMMON_ARGS --include Smoke --name "Smoke Test Suite" test-cases || true
 
             # Run Robot Framework Tests - P0 Critical Tests
-            robot --outputdir results/p0 \
-                  --loglevel INFO \
-                  --include P0 \
-                  --name "P0 Critical Tests" \
-                  --variable PLATFORM_NAME:android \
-                  --variable ANDROID_PLATFORM_VERSION:13 \
-                  --variable ENABLE_VIDEO_RECORDING:True \
-                  test-cases || true
+            robot --outputdir results/p0 $ROBOT_COMMON_ARGS --include P0 --name "P0 Critical Tests" test-cases || true
 
             # Run Robot Framework Tests - Login Regression
             if [ -d test-cases/login ]; then
-              robot --outputdir results/login \
-                    --loglevel INFO \
-                    --name "Login Regression Suite" \
-                    --variable PLATFORM_NAME:android \
-                    --variable ANDROID_PLATFORM_VERSION:13 \
-                    --variable ENABLE_VIDEO_RECORDING:True \
-                    test-cases/login || true
+              robot --outputdir results/login $ROBOT_COMMON_ARGS --name "Login Regression Suite" test-cases/login || true
             else
               echo "Login test suite directory not found, skipping..."
             fi
 
             # Run Robot Framework Tests - Signup Regression
             if [ -d test-cases/signup ]; then
-              robot --outputdir results/signup \
-                    --loglevel INFO \
-                    --name "Signup Regression Suite" \
-                    --variable PLATFORM_NAME:android \
-                    --variable ANDROID_PLATFORM_VERSION:13 \
-                    --variable ENABLE_VIDEO_RECORDING:True \
-                    test-cases/signup || true
+              robot --outputdir results/signup $ROBOT_COMMON_ARGS --name "Signup Regression Suite" test-cases/signup || true
             else
               echo "Signup test suite directory not found, skipping..."
             fi
