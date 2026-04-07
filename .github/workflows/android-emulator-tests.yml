@@ -188,26 +188,6 @@ jobs:
               echo "Signup test suite directory not found, skipping..."
             fi
 
-      - name: Generate Combined Robot Framework Report
-        if: always()
-        run: |
-          files=()
-          for f in results/output.xml results/p0/output.xml results/login/output.xml results/signup/output.xml; do
-            [ -f "$f" ] && files+=("$f")
-          done
-          
-          if [ ${#files[@]} -gt 0 ]; then
-            rebot --outputdir results/combined \
-                  --name "Complete Test Execution Report" \
-                  --output output.xml \
-                  --log log.html \
-                  --report report.html \
-                  "${files[@]}"
-            echo "Combined report generated from ${#files[@]} output file(s)"
-          else
-            echo "No Robot output.xml files found; skipping rebot."
-          fi
-
       - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
@@ -231,11 +211,7 @@ jobs:
         run: |
           echo "## Android Test Execution Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          if [ -f results/combined/report.html ]; then
-            echo "Test execution completed. Download artifacts to view detailed reports." >> $GITHUB_STEP_SUMMARY
-          else
-            echo "Test execution failed or incomplete." >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "Test execution completed. Download artifacts to view detailed reports." >> $GITHUB_STEP_SUMMARY
 
       - name: Shutdown Emulator
         if: always()
