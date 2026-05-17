@@ -1,76 +1,44 @@
 name: Android – Java Cucumber TestNG Allure
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Triggers
-# ──────────────────────────────────────────────────────────────────────────────
 on:
-  workflow_dispatch:        # Manual run via GitHub Actions UI (always available)
+  workflow_dispatch:
   push:
     branches: [main, master]
-    paths:
-      - "java-cucumber-android/**"
+    paths: ["java-cucumber-android/**"]
   pull_request:
     branches: [main, master]
-    paths:
-      - "java-cucumber-android/**"
+    paths: ["java-cucumber-android/**"]
 
-# ──────────────────────────────────────────────────────────────────────────────
-# Jobs
-# ──────────────────────────────────────────────────────────────────────────────
 jobs:
   android-cucumber-tests:
-    name: Run Cucumber tests on Android Emulator
     runs-on: ubuntu-latest
     timeout-minutes: 60
-
     defaults:
       run:
-        working-directory: java-cucumber-android   # all `run` steps use this cwd
+        working-directory: java-cucumber-android
 
     steps:
 
-      # ── 1. Source code ────────────────────────────────────────────────────
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # ── 2. Java ───────────────────────────────────────────────────────────
-      - name: Set up Java 11 (Temurin)
+      - name: Set up Java 11
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "11"
           cache: maven
 
-      # ── 3. Node.js (required by Appium CLI) ───────────────────────────────
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      # ── 4. Maven dependency cache ─────────────────────────────────────────
-      - name: Cache Maven local repository
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('java-cucumber-android/pom.xml') }}
-          restore-keys: ${{ runner.os }}-maven-
-
-      # ── 5. Appium 2 ───────────────────────────────────────────────────────
-      - name: Install Appium 2 and UIAutomator2 driver
+      - name: Install Appium 2 + UIAutomator2 driver
         run: |
           npm install -g appium@latest
           appium driver install uiautomator2
-          appium driver list --installed
 
-      # ── 6. Verify APK ─────────────────────────────────────────────────────
-      - name: Verify demo APK exists
-        working-directory: .
-        run: |
-          ls -lh apps/wdioNativeDemoApp.apk
-          unzip -t apps/wdioNativeDemoApp.apk > /dev/null
-          echo "APK verified"
-
-      # ── 7. KVM hardware acceleration ──────────────────────────────────────
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
@@ -78,95 +46,30 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      # ── 8. Appium server ──────────────────────────────────────────────────
       - name: Start Appium server
-        run: |
-          nohup appium --log-level info --log appium-server.log &
-          echo $! > /tmp/appium.pid
-          sleep 10
-          curl -s http://localhost:4723/status | grep -q '"ready":true' \
-            || (cat appium-server.log; exit 1)
-          echo "Appium server is ready"
+        run: nohup appium --log-level info --log appium-server.log & sleep 10
 
-      # ── 9. Emulator + Tests ───────────────────────────────────────────────
-      - name: Prepare test script
-        run: |
-          cat > /tmp/run-java-tests.sh << 'EOF'
-          #!/bin/bash
-          set -eu
-
-          echo "=== Emulator ready ==="
-          adb devices
-
-          # Stabilise ADB
-          adb kill-server || true
-          adb start-server
-          adb wait-for-device
-
-          # Wait for full boot
-          adb shell getprop sys.boot_completed | grep -m1 "1"
-
-          # Disable animations (speeds up tests)
-          adb shell settings put global window_animation_scale 0   || true
-          adb shell settings put global transition_animation_scale 0 || true
-          adb shell settings put global animator_duration_scale 0   || true
-
-          # Unlock screen
-          adb shell input keyevent 82 || true
-          sleep 2
-
-          # Install APK (with retry)
-          APK_PATH="$(pwd)/../apps/wdioNativeDemoApp.apk"
-          for attempt in 1 2 3; do
-            echo "Installing APK (attempt $attempt)…"
-            adb install -r "$APK_PATH" && break
-            echo "Attempt $attempt failed – retrying in 5 s"
-            sleep 5
-          done
-          adb shell pm list packages | grep wdiodemoapp
-
-          # Run tests
-          cd java-cucumber-android
-          mvn test \
-            -Dapp.path="$APK_PATH" \
-            -Ddevice.name="Android Emulator" \
-            -Dplatform.version=13 \
-            -Dappium.url=http://localhost:4723
-          EOF
-          chmod +x /tmp/run-java-tests.sh
-
-      - name: Run tests on Android emulator
+      - name: Run tests on Android Emulator (API 33)
         uses: reactivecircus/android-emulator-runner@v2.32.0
         with:
           api-level: 33
           target: google_apis
           arch: x86_64
           profile: Nexus 6
-          force-avd-creation: true
           disable-animations: true
-          cores: 2
-          ram-size: 4096M
-          heap-size: 512M
           emulator-options: >-
             -no-snapshot-save -no-window -gpu swiftshader_indirect
             -noaudio -no-boot-anim -camera-back none
-          script: bash /tmp/run-java-tests.sh
+          script: |
+            adb install -r ../apps/wdioNativeDemoApp.apk
+            mvn test \
+              -Dapp.path="$(pwd)/../apps/wdioNativeDemoApp.apk" \
+              -Ddevice.name="Android Emulator" \
+              -Dplatform.version=13
 
-      # ── 10. Generate Allure HTML report ───────────────────────────────────
       - name: Generate Allure report
         if: always()
-        run: |
-          mvn allure:report -q || echo "Allure report generation skipped (no results)"
-
-      # ── 11. Artifacts ─────────────────────────────────────────────────────
-      - name: Upload Allure results (raw JSON)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: allure-results
-          path: java-cucumber-android/target/allure-results/
-          if-no-files-found: warn
-          retention-days: 30
+        run: mvn allure:report -q || true
 
       - name: Upload Allure HTML report
         if: always()
@@ -177,42 +80,19 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Upload Cucumber HTML report
+      - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: cucumber-html-report
-          path: java-cucumber-android/target/cucumber-reports/
+          name: allure-results
+          path: java-cucumber-android/target/allure-results/
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Upload Appium server log
+      - name: Upload Appium log
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: appium-server-log
+          name: appium-log
           path: java-cucumber-android/appium-server.log
           if-no-files-found: warn
-          retention-days: 7
-
-      # ── 12. Step summary ──────────────────────────────────────────────────
-      - name: Publish step summary
-        if: always()
-        run: |
-          echo "## 🤖 Android Cucumber Test Summary" >> "$GITHUB_STEP_SUMMARY"
-          echo ""                                     >> "$GITHUB_STEP_SUMMARY"
-          echo "| Artifact | Description |"           >> "$GITHUB_STEP_SUMMARY"
-          echo "|----------|-------------|"           >> "$GITHUB_STEP_SUMMARY"
-          echo "| allure-report | Full Allure HTML report |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| allure-results | Raw JSON for Allure history |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| cucumber-html-report | Native Cucumber HTML report |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| appium-server-log | Appium server output |" >> "$GITHUB_STEP_SUMMARY"
-
-      # ── 13. Cleanup ───────────────────────────────────────────────────────
-      - name: Stop Appium server
-        if: always()
-        run: |
-          PID_FILE=/tmp/appium.pid
-          if [ -f "$PID_FILE" ]; then
-            kill "$(cat $PID_FILE)" 2>/dev/null || true
-          fi
